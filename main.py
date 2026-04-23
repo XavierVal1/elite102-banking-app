@@ -1,5 +1,5 @@
 import sqlite3
-
+import unittest
 conn = sqlite3.connect(':memory:')
 cursor = conn.cursor()
 cursor.execute('''
@@ -10,12 +10,17 @@ cursor.execute('''
         account_holder TEXT
     )
 ''')
-print("Welcome to the Valverde Bank! Please make a selection from the following... (1-5)\n1. Create new account\n2. Deposit money into an account\n3. Withdraw money\n4. Check account details\n5. list existing accounts\n6. Exit")
-cursor.execute("INSERT INTO accounts VALUES (1, 'checking', 500, 'Xavier Valverde')")
+
+'''initialising values & greeting'''
+selection = [1, 2, 3, 4, 5, 6]
+accounts = ["Xavier Valverde"]
+print("Welcome to the Valverde Bank! Please make a selection from the following... (1-6)\n1. Create new account\n2. Deposit money into an account\n3. Withdraw money\n4. Check account details\n5. list existing accounts\n6. Exit")
+cursor.execute("INSERT INTO accounts VALUES (1, 'checking', 1000, 'Xavier Valverde')")
 idCounter = 1
+loop = 1
 conn.commit()
 
-
+'''Defining functions'''
 def display_accounts():
     cursor.execute("SELECT * FROM accounts")
     rows = cursor.fetchall()
@@ -23,43 +28,123 @@ def display_accounts():
     print("All accounts:")
     for row in rows:
         print(f"  ID: {row[0]}, Type: {row[1]}, Balance: {row[2]}, account_holder: {row[3]}")
-while True:
-    select = input("Enter choice: ")
-    if select == "1":
-        idCounter += 1
-        type = input("Type of account: ")
-        balance = int(input("Starting balance: "))
-        act_hold = input("First and last name of account holder: ")
-        cursor.execute("INSERT INTO accounts VALUES (?, ?, ?, ?)", (idCounter, type, balance, act_hold))
-        conn.commit()
-    if select == "2":
+def make_account():
+    global idCounter
+    idCounter += 1
+    while True:
+        type = str.lower(input("Checking or savings account: "))
+        if type != "savings" and type != "checking":
+            print("choose a savings or checking account.")
+        if type == "savings" or type == "checking":
+            break
+    while True:
+        try:
+            balance = float(input("Starting balance: "))
+        except ValueError:
+            balance = -1
+        if balance < 0:
+            print("Enter a positive number")
+        if balance > 0:
+            break
+    act_hold = input("First and last name of account holder: ")
+    accounts.append(act_hold)
+    cursor.execute("INSERT INTO accounts VALUES (?, ?, ?, ?)", (idCounter, type, balance, act_hold))
+    print("Account made.")
+    conn.commit()
+def deposit_account():
+    while True:
         account = input("Please enter your first and last name: ")
-        bal = cursor.execute("SELECT balance FROM accounts WHERE account_holder = ?", (account,))
-        bal_1 = cursor.fetchall()
-        add = int(input("Amount to deposit: "))
-        cursor.execute("UPDATE accounts SET balance = ? WHERE account_holder = ?", (bal_1[0][0] + add, account))
-        print("depositing money")
-        display_accounts()
-    if select == "3":
+        if account not in accounts:
+            print("Account not found, try again.")
+        if account in accounts:
+            break
+    bal = cursor.execute("SELECT balance FROM accounts WHERE account_holder = ?", (account,))
+    bal_1 = cursor.fetchall()
+    while True:
+        try:
+            add = float(input("Amount to deposit: "))
+        except ValueError:
+            add = -1
+        if add < 0:
+            print("Enter a positive number")
+        if add > 0:
+            break
+    cursor.execute("UPDATE accounts SET balance = ? WHERE account_holder = ?", (bal_1[0][0] + add, account))
+    print(f"New balance: {bal_1[0][0] + add}")
+def withdraw_account():
+    while True:
         account = input("Please enter your first and last name: ")
-        bal = cursor.execute("SELECT balance FROM accounts WHERE account_holder = ?", (account,))
-        bal_1 = cursor.fetchall()
-        withdraw = int(input("Amount to withdraw: "))
-        cursor.execute("UPDATE accounts SET balance = ? WHERE account_holder = ?", (bal_1[0][0] - withdraw, account))
-        print("Withdrawing money")
-        display_accounts()
-    if select == "4":
-        account = input("First name and Last name: ")
-        cursor.execute("SELECT * FROM accounts WHERE account_holder = ?", (account,))
-        display = cursor.fetchall()[0]
-        conn.commit
-        print(f"{account}'s account: ")
-        print(f"  ID: {display[0]}, Type: {display[1]}, Balance: {display[2]}, account_holder: {display[3]}")
+        if account not in accounts:
+            print("Account not found, try again.")
+        if account in accounts:
+            break
+    bal = cursor.execute("SELECT balance FROM accounts WHERE account_holder = ?", (account,))
+    bal_1 = cursor.fetchall()
+    while True:
+        try:
+            withdraw = float(input("Amount to withdraw: "))
+        except ValueError:
+            print("Enter a positive number")
+            withdraw = -1.12
+        if withdraw != -1.12 and bal_1[0][0] - withdraw < 0:
+            print("Not enough in account")
+        if withdraw != -1.12 and bal_1[0][0] - withdraw > 0:
+            break
+    cursor.execute("UPDATE accounts SET balance = ? WHERE account_holder = ?", (bal_1[0][0] - withdraw, account))
+    print(f"New balance: {bal_1[0][0] - withdraw}")
+def display_single():
+    while True:
+            account = input("Please enter your first and last name: ")
+            if account not in accounts:
+                print("Account not found, try again.")
+            if account in accounts:
+                break
+    cursor.execute("SELECT * FROM accounts WHERE account_holder = ?", (account,))
+    display = cursor.fetchall()[0]
+    conn.commit
+    print(f"{account}'s account: ")
+    print(f"  ID: {display[0]}, Type: {display[1]}, Balance: {display[2]}, account_holder: {display[3]}")
 
-    if select == "5":
+
+'''Main CLI app'''
+while True:
+    if loop != 1:
+        print("1. Create new account\n2. Deposit money into an account\n3. Withdraw money\n4. Check account details\n5. list existing accounts\n6. Exit")
+    loop += 1
+    try:
+        select = int(input("Enter choice: "))
+    except ValueError:
+        select = 7
+    if select not in selection:
+        print("enter an integer between 1 and 6.")
+    if select == 1:
+        make_account()
+    if select == 2:
+        deposit_account()
+    if select == 3:
+        withdraw_account()
+    if select == 4:
+        display_single()
+    if select == 5:
         print("Listing existing accounts")
         display_accounts()
-    if select == "6":
+    if select == 6:
         print("Thanks for using this app!")
         conn.close()
         break
+
+'''Unit Testing'''
+def does_exist(e):
+    '''returns true if account does exist, false otherwise'''
+    return e in accounts
+
+class TestMyFunctions(unittest.TestCase):
+    def test_account_exists(self):
+        #checks that account exists
+        self.assertTrue(does_exist("Xotchitl Valverde"))
+'''Running The Tests'''
+import sys
+loader = unittest.TestLoader()
+suite = loader.loadTestsFromTestCase(TestMyFunctions)
+runner = unittest.TextTestRunner(stream=sys.stdout, verbosity=2)
+runner.run(suite)
