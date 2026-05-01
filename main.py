@@ -149,7 +149,7 @@ def does_exist(e):
 
 class TestMyFunctions(unittest.TestCase):
     def test_account_exists(self):
-        #checks that account exists / make account function works
+        #checks that account exists / verifies account function works
         make_account("checking", 340, "Xotchitl Valverde")
         self.assertTrue(does_exist("Xotchitl Valverde"))
     def test_withdraw(self):
